@@ -15,7 +15,12 @@ class AddCartItemEvent extends CartEvent {
   final String bookingDate;
   final int quantity;
 
-  const AddCartItemEvent(this.serviceId, this.slotId, this.bookingDate, this.quantity);
+  const AddCartItemEvent(
+    this.serviceId,
+    this.slotId,
+    this.bookingDate,
+    this.quantity,
+  );
 
   @override
   List<Object> get props => [serviceId, slotId, bookingDate, quantity];

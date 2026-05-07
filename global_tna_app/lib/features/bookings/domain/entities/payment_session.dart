@@ -1,6 +1,4 @@
 import 'package:equatable/equatable.dart';
-
-/// Holds the PayHere payment session data returned from the checkout endpoint.
 class PaymentSession extends Equatable {
   final String merchantId;
   final String orderId;
@@ -9,8 +7,8 @@ class PaymentSession extends Equatable {
   final String notifyUrl;
   final String returnUrl;
   final String cancelUrl;
-  final String custom1; // bookingId
-  final String custom2; // userId
+  final String custom1; 
+  final String custom2;
   final bool sandbox;
 
   const PaymentSession({
@@ -28,15 +26,15 @@ class PaymentSession extends Equatable {
 
   @override
   List<Object?> get props => [
-        merchantId,
-        orderId,
-        amount,
-        currency,
-        notifyUrl,
-        returnUrl,
-        cancelUrl,
-        custom1,
-        custom2,
-        sandbox,
-      ];
+    merchantId,
+    orderId,
+    amount,
+    currency,
+    notifyUrl,
+    returnUrl,
+    cancelUrl,
+    custom1,
+    custom2,
+    sandbox,
+  ];
 }

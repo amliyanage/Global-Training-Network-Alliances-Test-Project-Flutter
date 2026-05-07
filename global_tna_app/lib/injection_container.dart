@@ -1,6 +1,7 @@
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/network/dio_client.dart';
+import 'core/services/environment_service.dart';
 
 import 'features/auth/domain/repositories/auth_repository.dart';
 import 'features/auth/data/repositories/auth_repository_impl.dart';
@@ -25,59 +26,49 @@ import 'features/bookings/presentation/bloc/booking_bloc.dart';
 final sl = GetIt.instance;
 
 Future<void> init() async {
-  //! Core
+
   final sharedPreferences = await SharedPreferences.getInstance();
   sl.registerLazySingleton(() => sharedPreferences);
+  sl.registerLazySingleton(() => const EnvironmentService());
   sl.registerLazySingleton(() => DioClient(sharedPreferences: sl()));
 
-  //! Features - Auth
-  // BLoC
   sl.registerFactory(() => AuthBloc(authRepository: sl()));
-  
-  // Repository
-  sl.registerLazySingleton<AuthRepository>(() => AuthRepositoryImpl(
-        remoteDataSource: sl(),
-        sharedPreferences: sl(),
-        dioClient: sl(),
-      ));
-  
-  // Data sources
+
+  sl.registerLazySingleton<AuthRepository>(
+    () => AuthRepositoryImpl(remoteDataSource: sl(), sharedPreferences: sl()),
+  );
+
   sl.registerLazySingleton<AuthRemoteDataSource>(
-      () => AuthRemoteDataSourceImpl(dioClient: sl()));
-  
-  //! Features - Services
-  // BLoC
+    () => AuthRemoteDataSourceImpl(dioClient: sl()),
+  );
+
   sl.registerFactory(() => ServicesBloc(repository: sl()));
 
-  // Repository
   sl.registerLazySingleton<ServiceRepository>(
-      () => ServiceRepositoryImpl(remoteDataSource: sl()));
+    () => ServiceRepositoryImpl(remoteDataSource: sl()),
+  );
 
-  // Data sources
   sl.registerLazySingleton<ServiceRemoteDataSource>(
-      () => ServiceRemoteDataSourceImpl(dioClient: sl()));
-  
-  //! Features - Cart
-  // BLoC
-  sl.registerFactory(() => CartBloc(repository: sl()));
+    () => ServiceRemoteDataSourceImpl(dioClient: sl()),
+  );
 
-  // Repository
+  sl.registerFactory(() => CartBloc(repository: sl(), sharedPreferences: sl()));
+
   sl.registerLazySingleton<CartRepository>(
-      () => CartRepositoryImpl(remoteDataSource: sl()));
+    () => CartRepositoryImpl(remoteDataSource: sl()),
+  );
 
-  // Data sources
   sl.registerLazySingleton<CartRemoteDataSource>(
-      () => CartRemoteDataSourceImpl(dioClient: sl()));
-  
-  //! Features - Bookings
-  // BLoC
+    () => CartRemoteDataSourceImpl(dioClient: sl()),
+  );
+
   sl.registerFactory(() => BookingBloc(repository: sl()));
 
-  // Repository
   sl.registerLazySingleton<BookingRepository>(
-      () => BookingRepositoryImpl(remoteDataSource: sl()));
+    () => BookingRepositoryImpl(remoteDataSource: sl()),
+  );
 
-  // Data sources
   sl.registerLazySingleton<BookingRemoteDataSource>(
-      () => BookingRemoteDataSourceImpl(dioClient: sl()));
+    () => BookingRemoteDataSourceImpl(dioClient: sl()),
+  );
 }

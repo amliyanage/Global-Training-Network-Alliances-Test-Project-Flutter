@@ -12,7 +12,7 @@ class UserModel extends User {
 
   static Object? _readId(Map json, String key) => json['id'] ?? json['_id'];
 
-  factory UserModel.fromJson(Map<String, dynamic> json) => 
+  factory UserModel.fromJson(Map<String, dynamic> json) =>
       _$UserModelFromJson(json);
 
   Map<String, dynamic> toJson() => _$UserModelToJson(this);

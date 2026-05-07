@@ -5,8 +5,8 @@ class CartItemEntity extends Equatable {
   final String serviceId;
   final String slotId;
   final int quantity;
-  final double price; // Stored price per unit
-  final String serviceName; // Optional display helper
+  final double price; 
+  final String serviceName;
 
   const CartItemEntity({
     required this.id,
@@ -18,5 +18,12 @@ class CartItemEntity extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, serviceId, slotId, quantity, price, serviceName];
+  List<Object?> get props => [
+    id,
+    serviceId,
+    slotId,
+    quantity,
+    price,
+    serviceName,
+  ];
 }

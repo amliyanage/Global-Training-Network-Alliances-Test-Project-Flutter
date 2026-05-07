@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/widgets/app_skeleton.dart';
+import '../../../../core/widgets/app_snackbar.dart';
+import '../../../../core/widgets/empty_state_view.dart';
+import '../../../../core/widgets/error_state_view.dart';
 import '../../../bookings/presentation/bloc/booking_bloc.dart';
 import '../../../bookings/presentation/bloc/booking_event.dart';
 import '../../../bookings/presentation/bloc/booking_state.dart';
@@ -56,7 +59,6 @@ class CartPage extends StatelessWidget {
       providers: [
         BlocProvider(create: (_) => sl<CartBloc>()..add(LoadCartEvent())),
         BlocProvider(create: (_) => sl<BookingBloc>()),
-        BlocProvider(create: (_) => sl<AuthBloc>()),
       ],
       child: MultiBlocListener(
         listeners: [
@@ -70,14 +72,18 @@ class CartPage extends StatelessWidget {
           BlocListener<BookingBloc, BookingState>(
             listener: (context, state) {
               if (state is BookingCheckoutSuccess) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Checkout successful')),
+                AppSnackbar.show(
+                  context,
+                  message: 'Checkout successful',
+                  type: AppSnackType.success,
                 );
                 context.go('/bookings');
               } else if (state is BookingError) {
-                ScaffoldMessenger.of(
+                AppSnackbar.show(
                   context,
-                ).showSnackBar(SnackBar(content: Text(state.message)));
+                  message: state.message,
+                  type: AppSnackType.error,
+                );
               }
             },
           ),
@@ -105,11 +111,18 @@ class CartPage extends StatelessWidget {
               if (state is CartLoading || state is CartInitial) {
                 return const CartListSkeleton();
               } else if (state is CartError) {
-                return Center(child: Text(state.message));
+                return ErrorStateView(
+                  message: state.message,
+                  onRetry: () => context.read<CartBloc>().add(LoadCartEvent()),
+                );
               } else if (state is CartLoaded) {
                 final cart = state.cart;
                 if (cart.items.isEmpty) {
-                  return const Center(child: Text('Your cart is empty'));
+                  return const EmptyStateView(
+                    title: 'Your cart is empty',
+                    message: 'Add services to your cart to continue checkout.',
+                    icon: Icons.shopping_cart_outlined,
+                  );
                 }
                 return Column(
                   children: [

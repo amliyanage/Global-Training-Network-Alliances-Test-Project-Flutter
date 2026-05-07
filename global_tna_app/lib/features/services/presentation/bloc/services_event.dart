@@ -26,9 +26,10 @@ class FetchServicesEvent extends ServicesEvent {
 
 class FetchServiceDetailEvent extends ServicesEvent {
   final String id;
+  final String? bookingDate;
 
-  const FetchServiceDetailEvent(this.id);
+  const FetchServiceDetailEvent(this.id, {this.bookingDate});
 
   @override
-  List<Object?> get props => [id];
+  List<Object?> get props => [id, bookingDate];
 }

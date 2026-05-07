@@ -19,7 +19,7 @@ class BookingRepositoryImpl implements BookingRepository {
       final booking = await remoteDataSource.checkout(paymentMethod, customer);
       return Right(booking);
     } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
+      return Left(ServerFailure(e.message, e.errorCode));
     } on TypeError {
       return const Left(
         ServerFailure('Invalid checkout response format from API'),
@@ -35,7 +35,7 @@ class BookingRepositoryImpl implements BookingRepository {
       final bookings = await remoteDataSource.getBookings();
       return Right(bookings);
     } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
+      return Left(ServerFailure(e.message, e.errorCode));
     } on TypeError {
       return const Left(
         ServerFailure('Invalid bookings response format from API'),
@@ -51,7 +51,7 @@ class BookingRepositoryImpl implements BookingRepository {
       final booking = await remoteDataSource.getBookingById(id);
       return Right(booking);
     } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
+      return Left(ServerFailure(e.message, e.errorCode));
     } on TypeError {
       return const Left(
         ServerFailure('Invalid booking details response format from API'),
@@ -67,7 +67,7 @@ class BookingRepositoryImpl implements BookingRepository {
       final booking = await remoteDataSource.cancelBooking(id);
       return Right(booking);
     } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
+      return Left(ServerFailure(e.message, e.errorCode));
     } on TypeError {
       return const Left(
         ServerFailure('Invalid cancel booking response format from API'),

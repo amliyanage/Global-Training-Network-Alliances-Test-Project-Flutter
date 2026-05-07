@@ -46,13 +46,6 @@ class BookingModel extends BookingEntity {
     );
   }
 
-  /// Parses a full checkout API response body that may contain a nested
-  /// `paymentSession.payload` object alongside the booking data.
-  ///
-  /// Supports multiple response shapes:
-  ///   Shape A: { booking: {...}, paymentSession: { payload: {...} } }
-  ///   Shape B: { data: { booking: {...} }, paymentSession: { payload: {...} } }
-  ///   Shape C: { _id: ..., paymentSession: { payload: {...} } }   (flat)
   factory BookingModel.fromCheckoutJson(Map<String, dynamic> json) {
     final map = Map<String, dynamic>.from(json);
     final dataMap = _asMap(map['data']);

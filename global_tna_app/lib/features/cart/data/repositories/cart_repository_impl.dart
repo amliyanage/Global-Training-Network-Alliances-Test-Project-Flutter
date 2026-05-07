@@ -16,7 +16,7 @@ class CartRepositoryImpl implements CartRepository {
       final cart = await remoteDataSource.getCart();
       return Right(cart);
     } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
+      return Left(ServerFailure(e.message, e.errorCode));
     } on TypeError {
       return const Left(ServerFailure('Invalid cart data format from API'));
     } catch (e) {
@@ -32,10 +32,15 @@ class CartRepositoryImpl implements CartRepository {
     int quantity,
   ) async {
     try {
-      final cart = await remoteDataSource.addItem(serviceId, slotId, bookingDate, quantity);
+      final cart = await remoteDataSource.addItem(
+        serviceId,
+        slotId,
+        bookingDate,
+        quantity,
+      );
       return Right(cart);
     } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
+      return Left(ServerFailure(e.message, e.errorCode));
     } on TypeError {
       return const Left(
         ServerFailure('Invalid cart item response format from API'),
@@ -54,7 +59,7 @@ class CartRepositoryImpl implements CartRepository {
       final cart = await remoteDataSource.updateItem(itemId, quantity);
       return Right(cart);
     } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
+      return Left(ServerFailure(e.message, e.errorCode));
     } on TypeError {
       return const Left(
         ServerFailure('Invalid cart update response format from API'),
@@ -70,7 +75,7 @@ class CartRepositoryImpl implements CartRepository {
       final cart = await remoteDataSource.removeItem(itemId);
       return Right(cart);
     } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
+      return Left(ServerFailure(e.message, e.errorCode));
     } on TypeError {
       return const Left(
         ServerFailure('Invalid cart remove response format from API'),

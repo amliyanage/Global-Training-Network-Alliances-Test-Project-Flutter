@@ -9,6 +9,9 @@ abstract class ServiceRepository {
     String? category,
     String? title,
   });
-  
-  Future<Either<Failure, ServiceEntity>> getServiceById(String id, {String? bookingDate});
+
+  Future<Either<Failure, ServiceEntity>> getServiceById(
+    String id, {
+    String? bookingDate,
+  });
 }

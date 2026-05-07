@@ -1,7 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/widgets/app_skeleton.dart';
+import '../../../../core/widgets/app_snackbar.dart';
+import '../../../../core/widgets/empty_state_view.dart';
+import '../../../../core/widgets/error_state_view.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../cart/presentation/bloc/cart_bloc.dart';
 import '../../../cart/presentation/bloc/cart_event.dart';
@@ -22,12 +27,8 @@ class ServicesPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider(
-          create: (_) =>
-              sl<ServicesBloc>()..add(const FetchServicesEvent(limit: 10)),
-        ),
+        BlocProvider(create: (_) => sl<ServicesBloc>()),
         BlocProvider(create: (_) => sl<CartBloc>()),
-        BlocProvider(create: (_) => sl<AuthBloc>()),
       ],
       child: const _ServicesView(),
     );
@@ -44,18 +45,61 @@ class _ServicesView extends StatefulWidget {
 class _ServicesViewState extends State<_ServicesView> {
   static const int _pageSize = 10;
   late final ScrollController _scrollController;
+  late final TextEditingController _searchController;
+  Timer? _searchDebounce;
+  String _searchText = '';
+  String _selectedCategory = '';
+  List<String> _knownCategories = const [];
 
   @override
   void initState() {
     super.initState();
+    _searchController = TextEditingController();
     _scrollController = ScrollController()..addListener(_onScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchServices(page: 1);
+    });
   }
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
+    _searchController.dispose();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _fetchServices({required int page}) {
+    context.read<ServicesBloc>().add(
+      FetchServicesEvent(
+        page: page,
+        limit: _pageSize,
+        category: _selectedCategory.isEmpty ? null : _selectedCategory,
+        title: _searchText.isEmpty ? null : _searchText,
+      ),
+    );
+  }
+
+  void _onSearchChanged(String value) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 450), () {
+      _applySearchText(value);
+    });
+  }
+
+  void _onSearchSubmitted(String value) {
+    _searchDebounce?.cancel();
+    _applySearchText(value);
+  }
+
+  void _applySearchText(String value) {
+    final next = value.trim();
+    if (next == _searchText) return;
+    setState(() {
+      _searchText = next;
+    });
+    _fetchServices(page: 1);
   }
 
   void _onScroll() {
@@ -68,9 +112,48 @@ class _ServicesViewState extends State<_ServicesView> {
     if (servicesState is! ServicesLoaded) return;
     if (servicesState.isLoadingMore || servicesState.hasReachedMax) return;
 
-    context.read<ServicesBloc>().add(
-      FetchServicesEvent(page: servicesState.currentPage + 1, limit: _pageSize),
-    );
+    _fetchServices(page: servicesState.currentPage + 1);
+  }
+
+  Future<void> _refresh() async {
+    _fetchServices(page: 1);
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+  }
+
+  List<String> _categoriesFromServices(List<ServiceEntity> services) {
+    final values = <String>{};
+    for (final service in services) {
+      if (service.category.trim().isNotEmpty) {
+        values.add(service.category.trim());
+      }
+    }
+    final sorted = values.toList()..sort();
+    return sorted;
+  }
+
+  void _rememberCategories(List<ServiceEntity> services) {
+    if (_searchText.isNotEmpty || _selectedCategory.isNotEmpty) return;
+    final next = _categoriesFromServices(services);
+    if (next.isEmpty || _sameStringList(next, _knownCategories)) return;
+    setState(() {
+      _knownCategories = next;
+    });
+  }
+
+  bool _sameStringList(List<String> first, List<String> second) {
+    if (first.length != second.length) return false;
+    for (var i = 0; i < first.length; i++) {
+      if (first[i] != second[i]) return false;
+    }
+    return true;
+  }
+
+  List<String> _visibleCategories(ServicesState state) {
+    final fromCurrentState = state is ServicesLoaded
+        ? _categoriesFromServices(state.services)
+        : const <String>[];
+    final merged = {..._knownCategories, ...fromCurrentState}.toList()..sort();
+    return merged;
   }
 
   void _showAddToCartDialog(BuildContext context, ServiceEntity service) {
@@ -95,100 +178,113 @@ class _ServicesViewState extends State<_ServicesView> {
   Widget _buildServiceCard(BuildContext context, ServiceEntity service) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => context.push('/services/${service.id}'),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          service.title,
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primary.withAlpha(26),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            service.category,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    'LKR ${service.price.toStringAsFixed(0)}',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
                     children: [
-                      Text(
-                        service.title,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Icon(
+                        Icons.access_time,
+                        size: 16,
+                        color: Colors.grey.shade600,
                       ),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.primary.withAlpha(26),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          service.category,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.w600,
+                      const SizedBox(width: 4),
+                      Text(
+                        '${service.duration} min',
+                        style: TextStyle(color: Colors.grey.shade700),
+                      ),
+                      const SizedBox(width: 16),
+                      Icon(
+                        Icons.people_outline,
+                        size: 16,
+                        color: Colors.grey.shade600,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Max ${service.capacity}',
+                        style: TextStyle(color: Colors.grey.shade700),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      TextButton(
+                        onPressed: () =>
+                            context.push('/services/${service.id}'),
+                        child: const Text('Details'),
+                      ),
+                      const SizedBox(width: 6),
+                      ElevatedButton.icon(
+                        onPressed: () => _showAddToCartDialog(context, service),
+                        icon: const Icon(Icons.add_shopping_cart, size: 18),
+                        label: const Text('Book'),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
                           ),
                         ),
                       ),
                     ],
                   ),
-                ),
-                Text(
-                  'LKR ${service.price.toStringAsFixed(0)}',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.access_time,
-                      size: 16,
-                      color: Colors.grey.shade600,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${service.duration} min',
-                      style: TextStyle(color: Colors.grey.shade700),
-                    ),
-                    const SizedBox(width: 16),
-                    Icon(
-                      Icons.people_outline,
-                      size: 16,
-                      color: Colors.grey.shade600,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Max ${service.capacity}',
-                      style: TextStyle(color: Colors.grey.shade700),
-                    ),
-                  ],
-                ),
-                ElevatedButton.icon(
-                  onPressed: () => _showAddToCartDialog(context, service),
-                  icon: const Icon(Icons.add_shopping_cart, size: 18),
-                  label: const Text('Book'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -215,6 +311,63 @@ class _ServicesViewState extends State<_ServicesView> {
     );
   }
 
+  Widget _buildSearchAndFilterHeader(List<String> categories) {
+    final allCategories = ['All', ...categories];
+    final selected = _selectedCategory.isEmpty ? 'All' : _selectedCategory;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _searchController,
+            textInputAction: TextInputAction.search,
+            onChanged: _onSearchChanged,
+            onSubmitted: _onSearchSubmitted,
+            decoration: InputDecoration(
+              hintText: 'Search services...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchText.isNotEmpty
+                  ? IconButton(
+                      onPressed: () {
+                        _searchController.clear();
+                        _onSearchSubmitted('');
+                      },
+                      icon: const Icon(Icons.close),
+                    )
+                  : null,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: allCategories.map((category) {
+                final isActive = selected == category;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(category),
+                    selected: isActive,
+                    onSelected: (_) {
+                      final next = category == 'All' ? '' : category;
+                      if (next == _selectedCategory) return;
+                      setState(() {
+                        _selectedCategory = next;
+                      });
+                      _fetchServices(page: 1);
+                    },
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return MultiBlocListener(
@@ -229,13 +382,24 @@ class _ServicesViewState extends State<_ServicesView> {
         BlocListener<CartBloc, CartState>(
           listener: (context, state) {
             if (state is CartLoaded) {
-              ScaffoldMessenger.of(
+              AppSnackbar.show(
                 context,
-              ).showSnackBar(const SnackBar(content: Text('Added to cart')));
+                message: 'Added to cart',
+                type: AppSnackType.success,
+              );
             } else if (state is CartError) {
-              ScaffoldMessenger.of(
+              AppSnackbar.show(
                 context,
-              ).showSnackBar(SnackBar(content: Text(state.message)));
+                message: state.message,
+                type: AppSnackType.error,
+              );
+            }
+          },
+        ),
+        BlocListener<ServicesBloc, ServicesState>(
+          listener: (context, state) {
+            if (state is ServicesLoaded) {
+              _rememberCategories(state.services);
             }
           },
         ),
@@ -265,32 +429,69 @@ class _ServicesViewState extends State<_ServicesView> {
         ),
         body: BlocBuilder<ServicesBloc, ServicesState>(
           builder: (context, state) {
-            if (state is ServicesLoading) {
-              return const ServicesListSkeleton();
-            } else if (state is ServicesError) {
-              return Center(child: Text(state.message));
-            } else if (state is ServicesLoaded) {
-              final services = state.services;
-              if (services.isEmpty) {
-                return const Center(child: Text('No services found'));
-              }
-              final itemCount = services.length + (state.isLoadingMore ? 1 : 0);
+            final categories = _visibleCategories(state);
 
-              return ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.only(top: 8, bottom: 80),
-                itemCount: itemCount,
-                itemBuilder: (context, index) {
-                  if (index >= services.length) {
-                    return _buildLoadMoreIndicator();
-                  }
+            return Column(
+              children: [
+                _buildSearchAndFilterHeader(categories),
+                Expanded(
+                  child: () {
+                    if (state is ServicesLoading || state is ServicesInitial) {
+                      return const ServicesListSkeleton();
+                    }
 
-                  final service = services[index];
-                  return _buildServiceCard(context, service);
-                },
-              );
-            }
-            return const ServicesListSkeleton(itemCount: 4);
+                    if (state is ServicesError) {
+                      return ErrorStateView(
+                        message: state.message,
+                        onRetry: () => _fetchServices(page: 1),
+                      );
+                    }
+
+                    if (state is! ServicesLoaded) {
+                      return const ServicesListSkeleton(itemCount: 4);
+                    }
+
+                    final services = state.services;
+                    if (services.isEmpty) {
+                      return RefreshIndicator(
+                        onRefresh: _refresh,
+                        child: ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: const [
+                            SizedBox(height: 80),
+                            EmptyStateView(
+                              title: 'No services found',
+                              message:
+                                  'Try a different keyword or category filter.',
+                              icon: Icons.search_off_outlined,
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    final itemCount =
+                        services.length + (state.isLoadingMore ? 1 : 0);
+                    return RefreshIndicator(
+                      onRefresh: _refresh,
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.only(top: 4, bottom: 80),
+                        itemCount: itemCount,
+                        itemBuilder: (context, index) {
+                          if (index >= services.length) {
+                            return _buildLoadMoreIndicator();
+                          }
+                          final service = services[index];
+                          return _buildServiceCard(context, service);
+                        },
+                      ),
+                    );
+                  }(),
+                ),
+              ],
+            );
           },
         ),
       ),

@@ -1,11 +1,16 @@
 import 'package:dio/dio.dart';
-import '../../../../core/exceptions/exceptions.dart';
+import '../../../../core/network/api_error_mapper.dart';
 import '../models/cart_model.dart';
 import '../../../../core/network/dio_client.dart';
 
 abstract class CartRemoteDataSource {
   Future<CartModel> getCart();
-  Future<CartModel> addItem(String serviceId, String slotId, String bookingDate, int quantity);
+  Future<CartModel> addItem(
+    String serviceId,
+    String slotId,
+    String bookingDate,
+    int quantity,
+  );
   Future<CartModel> updateItem(String itemId, int quantity);
   Future<CartModel> removeItem(String itemId);
 }
@@ -15,35 +20,35 @@ class CartRemoteDataSourceImpl implements CartRemoteDataSource {
 
   CartRemoteDataSourceImpl({required this.dioClient});
 
-  String _extractErrorMessage(DioException e, String fallback) {
-    final data = e.response?.data;
-
-    if (data is Map) {
-      final map = Map<String, dynamic>.from(data);
-      final message = map['message'] ?? map['error'] ?? map['detail'];
-      if (message is String && message.trim().isNotEmpty) {
-        return message.trim();
+  Map<String, dynamic> _extractCartData(dynamic raw) {
+    if (raw is Map) {
+      final root = Map<String, dynamic>.from(raw);
+      final nested = root['data'];
+      if (nested is Map) {
+        final dataMap = Map<String, dynamic>.from(nested);
+        final cart = dataMap['cart'];
+        if (cart is Map) return Map<String, dynamic>.from(cart);
+        if (dataMap.containsKey('items') ||
+            dataMap.containsKey('runningTotal')) {
+          return dataMap;
+        }
       }
-      if (message is List && message.isNotEmpty) {
-        return message.join(', ');
-      }
+      final cart = root['cart'];
+      if (cart is Map) return Map<String, dynamic>.from(cart);
+      return root;
     }
-
-    if (data is String && data.trim().isNotEmpty) {
-      return data.trim();
-    }
-
-    return fallback;
+    return const {};
   }
 
   @override
   Future<CartModel> getCart() async {
     try {
       final response = await dioClient.dio.get('/cart');
-      return CartModel.fromJson(response.data['cart'] ?? response.data);
+      return CartModel.fromJson(_extractCartData(response.data));
     } on DioException catch (e) {
-      throw ServerException(
-        message: _extractErrorMessage(e, 'Failed to load cart'),
+      throw ApiErrorMapper.mapDioException(
+        e,
+        fallbackMessage: 'Failed to load cart',
       );
     }
   }
@@ -65,13 +70,11 @@ class CartRemoteDataSourceImpl implements CartRemoteDataSource {
           'quantity': quantity,
         },
       );
-      return CartModel.fromJson(response.data['cart'] ?? response.data);
+      return CartModel.fromJson(_extractCartData(response.data));
     } on DioException catch (e) {
-      throw ServerException(
-        message: _extractErrorMessage(
-          e,
-          'Failed to add item. Verify slotId and quantity.',
-        ),
+      throw ApiErrorMapper.mapDioException(
+        e,
+        fallbackMessage: 'Failed to add item. Verify slot and quantity.',
       );
     }
   }
@@ -83,10 +86,11 @@ class CartRemoteDataSourceImpl implements CartRemoteDataSource {
         '/cart/items/$itemId',
         data: {'quantity': quantity},
       );
-      return CartModel.fromJson(response.data['cart'] ?? response.data);
+      return CartModel.fromJson(_extractCartData(response.data));
     } on DioException catch (e) {
-      throw ServerException(
-        message: _extractErrorMessage(e, 'Failed to update item'),
+      throw ApiErrorMapper.mapDioException(
+        e,
+        fallbackMessage: 'Failed to update item',
       );
     }
   }
@@ -95,10 +99,11 @@ class CartRemoteDataSourceImpl implements CartRemoteDataSource {
   Future<CartModel> removeItem(String itemId) async {
     try {
       final response = await dioClient.dio.delete('/cart/items/$itemId');
-      return CartModel.fromJson(response.data['cart'] ?? response.data);
+      return CartModel.fromJson(_extractCartData(response.data));
     } on DioException catch (e) {
-      throw ServerException(
-        message: _extractErrorMessage(e, 'Failed to remove item'),
+      throw ApiErrorMapper.mapDioException(
+        e,
+        fallbackMessage: 'Failed to remove item',
       );
     }
   }

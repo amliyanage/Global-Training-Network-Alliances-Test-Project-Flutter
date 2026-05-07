@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/widgets/app_skeleton.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -27,11 +28,15 @@ class _LoginPageState extends State<LoginPage> {
   void _onSubmitPressed() {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
-    
+
     if (_isLogin) {
-      context.read<AuthBloc>().add(LoginEvent(email: email, password: password));
+      context.read<AuthBloc>().add(
+        LoginEvent(email: email, password: password),
+      );
     } else {
-      context.read<AuthBloc>().add(SignupEvent(email: email, password: password));
+      context.read<AuthBloc>().add(
+        SignupEvent(email: email, password: password),
+      );
     }
   }
 
@@ -70,18 +75,21 @@ class _LoginPageState extends State<LoginPage> {
                     Text(
                       'Welcome to GlobalTNA',
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: Theme.of(context).colorScheme.primary,
                           ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      _isLogin ? 'Sign in to book your next adventure' : 'Create an account to get started',
+                      _isLogin
+                          ? 'Sign in to book your next adventure'
+                          : 'Create an account to get started',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: Colors.grey.shade600,
-                          ),
+                        color: Colors.grey.shade600,
+                      ),
                     ),
                     const SizedBox(height: 48),
                     Card(
@@ -110,7 +118,14 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             const SizedBox(height: 24),
                             if (state is AuthLoading)
-                              const Center(child: CircularProgressIndicator())
+                              const AppSkeleton(
+                                child: SkeletonBox(
+                                  height: 48,
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(10),
+                                  ),
+                                ),
+                              )
                             else
                               ElevatedButton(
                                 onPressed: _onSubmitPressed,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/widgets/app_skeleton.dart';
 import '../../../bookings/presentation/bloc/booking_bloc.dart';
 import '../../../bookings/presentation/bloc/booking_event.dart';
 import '../../../bookings/presentation/bloc/booking_state.dart';
@@ -101,8 +102,8 @@ class CartPage extends StatelessWidget {
           ),
           body: BlocBuilder<CartBloc, CartState>(
             builder: (context, state) {
-              if (state is CartLoading) {
-                return const Center(child: CircularProgressIndicator());
+              if (state is CartLoading || state is CartInitial) {
+                return const CartListSkeleton();
               } else if (state is CartError) {
                 return Center(child: Text(state.message));
               } else if (state is CartLoaded) {
@@ -119,7 +120,10 @@ class CartPage extends StatelessWidget {
                         itemBuilder: (context, index) {
                           final item = cart.items[index];
                           return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 6,
+                            ),
                             child: Padding(
                               padding: const EdgeInsets.all(12.0),
                               child: Row(
@@ -128,18 +132,23 @@ class CartPage extends StatelessWidget {
                                     width: 48,
                                     height: 48,
                                     decoration: BoxDecoration(
-                                      color: Theme.of(context).colorScheme.primary.withAlpha(26),
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary.withAlpha(26),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Icon(
                                       Icons.local_offer_outlined,
-                                      color: Theme.of(context).colorScheme.primary,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
                                     ),
                                   ),
                                   const SizedBox(width: 16),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           item.serviceName,
@@ -160,7 +169,10 @@ class CartPage extends StatelessWidget {
                                     ),
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                                    icon: const Icon(
+                                      Icons.delete_outline,
+                                      color: Colors.redAccent,
+                                    ),
                                     onPressed: () {
                                       context.read<CartBloc>().add(
                                         RemoveCartItemEvent(item.id),
@@ -185,7 +197,9 @@ class CartPage extends StatelessWidget {
                             blurRadius: 16,
                           ),
                         ],
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(24),
+                        ),
                       ),
                       child: SafeArea(
                         child: Column(
@@ -203,9 +217,14 @@ class CartPage extends StatelessWidget {
                                   ),
                                 ),
                                 Text(
-                                  '\$${cart.runningTotal.toStringAsFixed(2)}',
-                                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                        color: Theme.of(context).colorScheme.primary,
+                                  'LKR ${cart.runningTotal.toStringAsFixed(2)}',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .headlineSmall
+                                      ?.copyWith(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primary,
                                         fontWeight: FontWeight.bold,
                                       ),
                                 ),
@@ -214,15 +233,20 @@ class CartPage extends StatelessWidget {
                             const SizedBox(height: 16),
                             BlocBuilder<BookingBloc, BookingState>(
                               builder: (context, bookingState) {
-                                final isSubmitting = bookingState is BookingLoading;
+                                final isSubmitting =
+                                    bookingState is BookingLoading;
                                 return SizedBox(
                                   width: double.infinity,
                                   child: ElevatedButton(
                                     onPressed: isSubmitting
                                         ? null
                                         : () async {
-                                            final paymentMethod = await _selectPaymentMethod(context);
-                                            if (paymentMethod == null || !context.mounted) {
+                                            final paymentMethod =
+                                                await _selectPaymentMethod(
+                                                  context,
+                                                );
+                                            if (paymentMethod == null ||
+                                                !context.mounted) {
                                               return;
                                             }
                                             if (paymentMethod == 'online') {
@@ -231,12 +255,16 @@ class CartPage extends StatelessWidget {
                                               context.push('/checkout');
                                             } else {
                                               context.read<BookingBloc>().add(
-                                                CheckoutEvent(paymentMethod: paymentMethod),
+                                                CheckoutEvent(
+                                                  paymentMethod: paymentMethod,
+                                                ),
                                               );
                                             }
                                           },
                                     style: ElevatedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 16,
+                                      ),
                                     ),
                                     child: isSubmitting
                                         ? const SizedBox(
@@ -244,10 +272,16 @@ class CartPage extends StatelessWidget {
                                             height: 24,
                                             child: CircularProgressIndicator(
                                               strokeWidth: 2,
-                                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                    Colors.white,
+                                                  ),
                                             ),
                                           )
-                                        : const Text('Proceed to Checkout', style: TextStyle(fontSize: 16)),
+                                        : const Text(
+                                            'Proceed to Checkout',
+                                            style: TextStyle(fontSize: 16),
+                                          ),
                                   ),
                                 );
                               },
@@ -259,7 +293,7 @@ class CartPage extends StatelessWidget {
                   ],
                 );
               }
-              return const Center(child: Text('Initializing...'));
+              return const CartListSkeleton();
             },
           ),
         ),

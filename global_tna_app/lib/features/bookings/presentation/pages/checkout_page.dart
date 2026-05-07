@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:payhere_mobilesdk_flutter/payhere_mobilesdk_flutter.dart';
 
 import '../../../../config/env_config.dart';
+import '../../../../core/widgets/app_skeleton.dart';
 import '../../../../injection_container.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
@@ -454,7 +455,7 @@ class _CheckoutViewState extends State<_CheckoutView> {
         body: BlocBuilder<CartBloc, CartState>(
           builder: (context, cartState) {
             if (cartState is CartLoading || cartState is CartInitial) {
-              return const Center(child: CircularProgressIndicator());
+              return const CheckoutSkeleton();
             }
             if (cartState is CartError) {
               return Center(

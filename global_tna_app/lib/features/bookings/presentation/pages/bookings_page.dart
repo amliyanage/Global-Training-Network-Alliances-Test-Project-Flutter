@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/widgets/app_skeleton.dart';
 import '../bloc/booking_bloc.dart';
 import '../bloc/booking_event.dart';
 import '../bloc/booking_state.dart';
@@ -16,7 +17,9 @@ class BookingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider(create: (_) => sl<BookingBloc>()..add(LoadBookingsEvent())),
+        BlocProvider(
+          create: (_) => sl<BookingBloc>()..add(LoadBookingsEvent()),
+        ),
         BlocProvider(create: (_) => sl<AuthBloc>()),
       ],
       child: BlocListener<AuthBloc, AuthState>(
@@ -50,8 +53,8 @@ class BookingsPage extends StatelessWidget {
           ),
           body: BlocBuilder<BookingBloc, BookingState>(
             builder: (context, state) {
-              if (state is BookingLoading) {
-                return const Center(child: CircularProgressIndicator());
+              if (state is BookingLoading || state is BookingInitial) {
+                return const BookingsListSkeleton();
               } else if (state is BookingError) {
                 return Center(child: Text(state.message));
               } else if (state is BookingsLoaded) {
@@ -64,7 +67,7 @@ class BookingsPage extends StatelessWidget {
                   itemCount: bookings.length,
                   itemBuilder: (context, index) {
                     final booking = bookings[index];
-                    
+
                     Color statusColor;
                     IconData statusIcon;
                     switch (booking.status.toLowerCase()) {
@@ -101,9 +104,12 @@ class BookingsPage extends StatelessWidget {
                                   ),
                                 ),
                                 Text(
-                                  '\$${booking.totalAmount.toStringAsFixed(2)}',
-                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                        color: Theme.of(context).colorScheme.primary,
+                                  'LKR ${booking.totalAmount.toStringAsFixed(2)}',
+                                  style: Theme.of(context).textTheme.titleLarge
+                                      ?.copyWith(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primary,
                                         fontWeight: FontWeight.bold,
                                       ),
                                 ),
@@ -116,17 +122,27 @@ class BookingsPage extends StatelessWidget {
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text('Status', style: TextStyle(color: Colors.grey)),
+                                    const Text(
+                                      'Status',
+                                      style: TextStyle(color: Colors.grey),
+                                    ),
                                     const SizedBox(height: 4),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: statusColor.withAlpha(26),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Row(
                                         children: [
-                                          Icon(statusIcon, size: 14, color: statusColor),
+                                          Icon(
+                                            statusIcon,
+                                            size: 14,
+                                            color: statusColor,
+                                          ),
                                           const SizedBox(width: 4),
                                           Text(
                                             booking.status.toUpperCase(),
@@ -144,7 +160,10 @@ class BookingsPage extends StatelessWidget {
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
-                                    const Text('Payment', style: TextStyle(color: Colors.grey)),
+                                    const Text(
+                                      'Payment',
+                                      style: TextStyle(color: Colors.grey),
+                                    ),
                                     const SizedBox(height: 4),
                                     Text(
                                       booking.paymentStatus.toUpperCase(),
@@ -162,11 +181,19 @@ class BookingsPage extends StatelessWidget {
                               SizedBox(
                                 width: double.infinity,
                                 child: OutlinedButton.icon(
-                                  icon: const Icon(Icons.cancel_outlined, color: Colors.red),
-                                  label: const Text('Cancel Booking', style: TextStyle(color: Colors.red)),
+                                  icon: const Icon(
+                                    Icons.cancel_outlined,
+                                    color: Colors.red,
+                                  ),
+                                  label: const Text(
+                                    'Cancel Booking',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
                                   style: OutlinedButton.styleFrom(
                                     side: const BorderSide(color: Colors.red),
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
                                   ),
                                   onPressed: () {
                                     context.read<BookingBloc>().add(
@@ -183,7 +210,7 @@ class BookingsPage extends StatelessWidget {
                   },
                 );
               }
-              return const Center(child: Text('Initializing...'));
+              return const BookingsListSkeleton();
             },
           ),
         ),

@@ -1,0 +1,767 @@
+{
+  "info": {
+    "_postman_id": "7f09a65c-6b3a-4467-96a9-8588801966a3",
+    "name": "Global Training Network Alliances API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};",
+                  "try {",
+                  "  json = pm.response.json();",
+                  "} catch (e) {",
+                  "  json = {};",
+                  "}",
+                  "",
+                  "if (json.token) {",
+                  "  pm.collectionVariables.set(\"auth_token\", json.token);",
+                  "}",
+                  "",
+                  "if (json.user && json.user.id) {",
+                  "  pm.collectionVariables.set(\"user_id\", json.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Services",
+      "item": [
+        {
+          "name": "List Services",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/services?page=1&limit=10&category=Cleaning&title=Cleaning",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "services"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "category",
+                  "value": "Cleaning"
+                },
+                {
+                  "key": "title",
+                  "value": "Cleaning"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Service by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/services/:id?bookingDate={{booking_date}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "services",
+                ":id"
+              ],
+              "query": [
+                {
+                  "key": "bookingDate",
+                  "value": "{{booking_date}}"
+                }
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "service_id_here"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cart",
+      "item": [
+        {
+          "name": "Get Cart",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cart",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cart"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Item to Cart",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"serviceId\": \"service_id_here\",\n    \"slotId\": \"slot_id_here\",\n    \"bookingDate\": \"{{booking_date}}\",\n    \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/cart/items",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cart",
+                "items"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Cart Item",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"quantity\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/cart/items/:itemId",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cart",
+                "items",
+                ":itemId"
+              ],
+              "variable": [
+                {
+                  "key": "itemId",
+                  "value": "item_id_here"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Remove Cart Item",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cart/items/:itemId",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cart",
+                "items",
+                ":itemId"
+              ],
+              "variable": [
+                {
+                  "key": "itemId",
+                  "value": "item_id_here"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "item": [
+        {
+          "name": "Checkout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"paymentMethod\": \"online\",\n    \"customer\": {\n        \"firstName\": \"{{customer_first_name}}\",\n        \"lastName\": \"{{customer_last_name}}\",\n        \"email\": \"{{customer_email}}\",\n        \"phone\": \"{{customer_phone}}\",\n        \"address\": \"{{customer_address}}\",\n        \"city\": \"{{customer_city}}\",\n        \"country\": \"{{customer_country}}\"\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/bookings/checkout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bookings",
+                "checkout"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};",
+                  "try {",
+                  "  json = pm.response.json();",
+                  "} catch (e) {",
+                  "  json = {};",
+                  "}",
+                  "",
+                  "const booking = json.booking || json;",
+                  "if (booking && booking._id) {",
+                  "  pm.collectionVariables.set(\"booking_id\", booking._id);",
+                  "}",
+                  "",
+                  "if (booking && booking.paymentOrderId) {",
+                  "  pm.collectionVariables.set(\"payment_order_id\", booking.paymentOrderId);",
+                  "}",
+                  "",
+                  "if (booking && booking.totalAmount !== undefined) {",
+                  "  const parsed = Number(booking.totalAmount);",
+                  "  if (!Number.isNaN(parsed)) {",
+                  "    pm.collectionVariables.set(\"payhere_amount\", parsed.toFixed(2));",
+                  "  }",
+                  "}",
+                  "",
+                  "if (json.paymentSession && json.paymentSession.payload) {",
+                  "  const payload = json.paymentSession.payload;",
+                  "  if (payload.order_id) pm.collectionVariables.set(\"payment_order_id\", payload.order_id);",
+                  "  if (payload.amount) pm.collectionVariables.set(\"payhere_amount\", payload.amount);",
+                  "  if (payload.currency) pm.collectionVariables.set(\"payhere_currency\", payload.currency);",
+                  "  if (payload.merchant_id) pm.collectionVariables.set(\"payhere_merchant_id\", payload.merchant_id);",
+                  "  if (payload.custom_1) pm.collectionVariables.set(\"booking_id\", payload.custom_1);",
+                  "  if (payload.custom_2) pm.collectionVariables.set(\"user_id\", payload.custom_2);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PayHere Notify (Simulate)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "merchant_id",
+                  "value": "{{payhere_merchant_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "order_id",
+                  "value": "{{payment_order_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "payment_id",
+                  "value": "{{payhere_payment_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "payhere_amount",
+                  "value": "{{payhere_amount}}",
+                  "type": "text"
+                },
+                {
+                  "key": "payhere_currency",
+                  "value": "{{payhere_currency}}",
+                  "type": "text"
+                },
+                {
+                  "key": "status_code",
+                  "value": "{{payhere_status_code}}",
+                  "type": "text"
+                },
+                {
+                  "key": "md5sig",
+                  "value": "{{payhere_md5sig}}",
+                  "type": "text"
+                },
+                {
+                  "key": "method",
+                  "value": "{{payhere_method}}",
+                  "type": "text"
+                },
+                {
+                  "key": "status_message",
+                  "value": "{{payhere_status_message}}",
+                  "type": "text"
+                },
+                {
+                  "key": "custom_1",
+                  "value": "{{booking_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "custom_2",
+                  "value": "{{user_id}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/bookings/payhere/notify",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bookings",
+                "payhere",
+                "notify"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const merchantId = pm.collectionVariables.get(\"payhere_merchant_id\");",
+                  "const merchantSecret = pm.collectionVariables.get(\"payhere_merchant_secret\");",
+                  "const orderId = pm.collectionVariables.get(\"payment_order_id\");",
+                  "const amountRaw = pm.collectionVariables.get(\"payhere_amount\");",
+                  "const currency = (pm.collectionVariables.get(\"payhere_currency\") || \"LKR\").toUpperCase();",
+                  "const statusCode = pm.collectionVariables.get(\"payhere_status_code\") || \"2\";",
+                  "",
+                  "if (!merchantId || !merchantSecret || !orderId || !amountRaw) {",
+                  "  throw new Error(\"Missing PayHere vars: payhere_merchant_id, payhere_merchant_secret, payment_order_id, payhere_amount\");",
+                  "}",
+                  "",
+                  "const parsedAmount = Number(amountRaw);",
+                  "if (Number.isNaN(parsedAmount)) {",
+                  "  throw new Error(\"payhere_amount must be a number\");",
+                  "}",
+                  "",
+                  "const amount = parsedAmount.toFixed(2);",
+                  "pm.collectionVariables.set(\"payhere_amount\", amount);",
+                  "pm.collectionVariables.set(\"payhere_currency\", currency);",
+                  "",
+                  "const hashedSecret = CryptoJS.MD5(merchantSecret).toString().toUpperCase();",
+                  "const md5sig = CryptoJS.MD5(`${merchantId}${orderId}${amount}${currency}${statusCode}${hashedSecret}`)",
+                  "  .toString()",
+                  "  .toUpperCase();",
+                  "",
+                  "pm.collectionVariables.set(\"payhere_md5sig\", md5sig);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Bookings",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/bookings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Booking by ID",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/bookings/:id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bookings",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "booking_id_here"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Booking",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/bookings/:id/cancel",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "bookings",
+                ":id",
+                "cancel"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "booking_id_here"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:6000",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "your_token_here",
+      "type": "string"
+    },
+    {
+      "key": "booking_date",
+      "value": "2026-05-08",
+      "type": "string"
+    },
+    {
+      "key": "payhere_merchant_id",
+      "value": "1211142",
+      "type": "string"
+    },
+    {
+      "key": "base_url_dev",
+      "value": "http://localhost:6001",
+      "type": "string"
+    },
+    {
+      "key": "payhere_merchant_secret",
+      "value": "replace_with_your_merchant_secret",
+      "type": "string"
+    },
+    {
+      "key": "payhere_currency",
+      "value": "LKR",
+      "type": "string"
+    },
+    {
+      "key": "payhere_status_code",
+      "value": "2",
+      "type": "string"
+    },
+    {
+      "key": "payhere_method",
+      "value": "VISA",
+      "type": "string"
+    },
+    {
+      "key": "payhere_status_message",
+      "value": "Successfully completed payment",
+      "type": "string"
+    },
+    {
+      "key": "payhere_payment_id",
+      "value": "320025071278",
+      "type": "string"
+    },
+    {
+      "key": "payhere_md5sig",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "booking_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "payment_order_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "payhere_amount",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "customer_first_name",
+      "value": "Saman",
+      "type": "string"
+    },
+    {
+      "key": "customer_last_name",
+      "value": "Perera",
+      "type": "string"
+    },
+    {
+      "key": "customer_email",
+      "value": "test@example.com",
+      "type": "string"
+    },
+    {
+      "key": "customer_phone",
+      "value": "0771234567",
+      "type": "string"
+    },
+    {
+      "key": "customer_address",
+      "value": "No.1, Galle Road",
+      "type": "string"
+    },
+    {
+      "key": "customer_city",
+      "value": "Colombo",
+      "type": "string"
+    },
+    {
+      "key": "customer_country",
+      "value": "Sri Lanka",
+      "type": "string"
+    }
+  ]
+}

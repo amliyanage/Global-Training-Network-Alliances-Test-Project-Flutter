@@ -8,6 +8,7 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
 
   BookingBloc({required this.repository}) : super(BookingInitial()) {
     on<LoadBookingsEvent>(_onLoadBookings);
+    on<LoadBookingByIdEvent>(_onLoadBookingById);
     on<CheckoutEvent>(_onCheckout);
     on<CancelBookingEvent>(_onCancelBooking);
   }
@@ -24,12 +25,27 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
     );
   }
 
+  Future<void> _onLoadBookingById(
+    LoadBookingByIdEvent event,
+    Emitter<BookingState> emit,
+  ) async {
+    emit(BookingLoading());
+    final result = await repository.getBookingById(event.id);
+    result.fold(
+      (failure) => emit(BookingError(failure.message)),
+      (booking) => emit(BookingDetailLoaded(booking)),
+    );
+  }
+
   Future<void> _onCheckout(
     CheckoutEvent event,
     Emitter<BookingState> emit,
   ) async {
     emit(BookingLoading());
-    final result = await repository.checkout(event.paymentMethod, event.customer);
+    final result = await repository.checkout(
+      event.paymentMethod,
+      event.customer,
+    );
     result.fold(
       (failure) => emit(BookingError(failure.message)),
       (booking) => emit(BookingCheckoutSuccess(booking)),
@@ -44,7 +60,6 @@ class BookingBloc extends Bloc<BookingEvent, BookingState> {
     final result = await repository.cancelBooking(event.id);
     result.fold(
       (failure) => emit(BookingError(failure.message)),
-      // Refresh list after cancel
       (booking) => add(LoadBookingsEvent()),
     );
   }

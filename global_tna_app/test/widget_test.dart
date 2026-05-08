@@ -1,30 +1,45 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
+import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:global_tna_app/core/exceptions/failures.dart';
+import 'package:global_tna_app/features/auth/domain/entities/user.dart';
+import 'package:global_tna_app/features/auth/domain/repositories/auth_repository.dart';
+import 'package:global_tna_app/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:global_tna_app/features/auth/presentation/pages/login_page.dart';
 
-import 'package:global_tna_app/main.dart';
+class _FakeAuthRepository implements AuthRepository {
+  @override
+  Future<Either<Failure, User>> getCurrentUser() async =>
+      const Left(ServerFailure('no'));
+
+  @override
+  Future<bool> isLoggedIn() async => false;
+
+  @override
+  Future<Either<Failure, User>> login(String email, String password) async =>
+      const Left(ServerFailure('no'));
+
+  @override
+  Future<Either<Failure, void>> logout() async => const Right(null);
+
+  @override
+  Future<Either<Failure, User>> signup(String email, String password) async =>
+      const Left(ServerFailure('no'));
+}
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const GlobalTNAApp());
+  testWidgets('login page renders sign in form', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BlocProvider(
+          create: (_) => AuthBloc(authRepository: _FakeAuthRepository()),
+          child: const LoginPage(),
+        ),
+      ),
+    );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('Welcome Back'), findsOneWidget);
+    expect(find.text('Sign In'), findsOneWidget);
   });
 }

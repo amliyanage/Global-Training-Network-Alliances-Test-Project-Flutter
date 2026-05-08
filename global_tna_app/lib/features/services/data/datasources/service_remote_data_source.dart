@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
-import '../../../../core/exceptions/exceptions.dart';
+import 'package:flutter/foundation.dart';
+import '../../../../core/network/api_error_mapper.dart';
 import '../models/service_model.dart';
 import '../../../../core/network/dio_client.dart';
 
@@ -10,7 +11,7 @@ abstract class ServiceRemoteDataSource {
     String? category,
     String? title,
   });
-  
+
   Future<ServiceModel> getServiceById(String id, {String? bookingDate});
 }
 
@@ -33,13 +34,34 @@ class ServiceRemoteDataSourceImpl implements ServiceRemoteDataSource {
         if (category != null && category.isNotEmpty) 'category': category,
         if (title != null && title.isNotEmpty) 'title': title,
       };
+      if (kDebugMode) {
+        debugPrint('GET /services query: $queryParams');
+      }
 
-      final response = await dioClient.dio.get('/services', queryParameters: queryParams);
-      // Assuming response structure: { "data": [...], "total": ..., "hasMore": ... }
-      final List<dynamic> data = response.data['data'] ?? [];
-      return data.map((json) => ServiceModel.fromJson(json)).toList();
+      final response = await dioClient.dio.get(
+        '/services',
+        queryParameters: queryParams,
+      );
+      final root = _asMap(response.data);
+      final nested = _asMap(root['data']);
+      final List<dynamic> data =
+          (nested['data'] as List?) ??
+          (root['data'] as List?) ??
+          (root['services'] as List?) ??
+          const [];
+      final parsed = data
+          .whereType<Map>()
+          .map((json) => ServiceModel.fromJson(Map<String, dynamic>.from(json)))
+          .toList();
+      if (kDebugMode) {
+        debugPrint('GET /services -> ${parsed.length} items');
+      }
+      return parsed;
     } on DioException catch (e) {
-      throw ServerException(message: e.response?.data['message'] ?? 'Failed to load services');
+      throw ApiErrorMapper.mapDioException(
+        e,
+        fallbackMessage: 'Failed to load services',
+      );
     }
   }
 
@@ -48,15 +70,23 @@ class ServiceRemoteDataSourceImpl implements ServiceRemoteDataSource {
     try {
       final response = await dioClient.dio.get(
         '/services/$id',
-        queryParameters: {
-          'bookingDate': bookingDate,
-        }..removeWhere((key, value) => value == null),
+        queryParameters: {'bookingDate': bookingDate}
+          ..removeWhere((key, value) => value == null),
       );
-      // Assuming response body: { "data": {...} } or just {...}
-      final data = response.data['data'] ?? response.data;
-      return ServiceModel.fromJson(data);
+      final root = _asMap(response.data);
+      final data = _asMap(root['data']);
+      final payload = data.isNotEmpty ? data : root;
+      return ServiceModel.fromJson(payload);
     } on DioException catch (e) {
-      throw ServerException(message: e.response?.data['message'] ?? 'Failed to load service');
+      throw ApiErrorMapper.mapDioException(
+        e,
+        fallbackMessage: 'Failed to load service',
+      );
     }
+  }
+
+  Map<String, dynamic> _asMap(dynamic value) {
+    if (value is Map) return Map<String, dynamic>.from(value);
+    return const {};
   }
 }

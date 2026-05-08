@@ -3,7 +3,7 @@ import '../../domain/entities/cart.dart';
 
 abstract class CartState extends Equatable {
   const CartState();
-  
+
   @override
   List<Object> get props => [];
 }

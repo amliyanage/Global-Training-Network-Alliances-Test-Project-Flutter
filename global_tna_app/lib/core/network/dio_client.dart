@@ -20,8 +20,8 @@ class DioClient {
         ),
       ) {
     dio.interceptors.add(AuthInterceptor(sharedPreferences));
-    // Keep debug logging lightweight and avoid leaking auth headers/body payloads.
     if (kDebugMode) {
+      debugPrint('Dio base URL: ${dio.options.baseUrl}');
       dio.interceptors.add(
         LogInterceptor(
           requestHeader: false,

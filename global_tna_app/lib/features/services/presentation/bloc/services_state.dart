@@ -3,7 +3,7 @@ import '../../domain/entities/service.dart';
 
 abstract class ServicesState extends Equatable {
   const ServicesState();
-  
+
   @override
   List<Object> get props => [];
 }
@@ -15,11 +15,37 @@ class ServicesLoading extends ServicesState {}
 class ServicesLoaded extends ServicesState {
   final List<ServiceEntity> services;
   final bool hasReachedMax;
+  final bool isLoadingMore;
+  final int currentPage;
 
-  const ServicesLoaded(this.services, {this.hasReachedMax = false});
+  const ServicesLoaded(
+    this.services, {
+    this.hasReachedMax = false,
+    this.isLoadingMore = false,
+    this.currentPage = 1,
+  });
+
+  ServicesLoaded copyWith({
+    List<ServiceEntity>? services,
+    bool? hasReachedMax,
+    bool? isLoadingMore,
+    int? currentPage,
+  }) {
+    return ServicesLoaded(
+      services ?? this.services,
+      hasReachedMax: hasReachedMax ?? this.hasReachedMax,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      currentPage: currentPage ?? this.currentPage,
+    );
+  }
 
   @override
-  List<Object> get props => [services, hasReachedMax];
+  List<Object> get props => [
+    services,
+    hasReachedMax,
+    isLoadingMore,
+    currentPage,
+  ];
 }
 
 class ServiceDetailLoaded extends ServicesState {

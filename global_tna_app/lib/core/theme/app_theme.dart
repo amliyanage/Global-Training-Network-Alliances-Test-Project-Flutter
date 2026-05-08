@@ -2,40 +2,65 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
+  static const _seed = Color(0xFF0B6E99);
+
+  static TextTheme _textTheme(Color textColor) {
+    return GoogleFonts.manropeTextTheme().apply(
+      bodyColor: textColor,
+      displayColor: textColor,
+    );
+  }
+
   static ThemeData get lightTheme {
     final ColorScheme colorScheme = ColorScheme.fromSeed(
-      seedColor: Colors.deepPurple,
-      primary: Colors.deepPurple,
-      secondary: Colors.indigo,
-      surface: Colors.white,
+      seedColor: _seed,
+      brightness: Brightness.light,
     );
 
+    return _buildTheme(
+      colorScheme: colorScheme,
+      scaffoldBackground: const Color(0xFFF6F8FB),
+      textTheme: _textTheme(const Color(0xFF15212A)),
+    );
+  }
+
+  static ThemeData get darkTheme {
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: _seed,
+      brightness: Brightness.dark,
+    );
+    return _buildTheme(
+      colorScheme: colorScheme,
+      scaffoldBackground: const Color(0xFF0B1117),
+      textTheme: _textTheme(const Color(0xFFEAF2F8)),
+    );
+  }
+
+  static ThemeData _buildTheme({
+    required ColorScheme colorScheme,
+    required Color scaffoldBackground,
+    required TextTheme textTheme,
+  }) {
     return ThemeData(
       colorScheme: colorScheme,
       useMaterial3: true,
-      scaffoldBackgroundColor: const Color(0xFFF8F9FA),
-      textTheme: GoogleFonts.interTextTheme().apply(
-        bodyColor: Colors.black87,
-        displayColor: Colors.black,
-      ),
+      scaffoldBackgroundColor: scaffoldBackground,
+      textTheme: textTheme,
       appBarTheme: AppBarTheme(
-        backgroundColor: colorScheme.primary,
-        foregroundColor: colorScheme.onPrimary,
+        backgroundColor: colorScheme.surface,
+        foregroundColor: colorScheme.onSurface,
         elevation: 0,
-        centerTitle: true,
-        titleTextStyle: GoogleFonts.inter(
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-          color: colorScheme.onPrimary,
+        centerTitle: false,
+        titleTextStyle: textTheme.titleLarge?.copyWith(
+          fontWeight: FontWeight.w700,
+          color: colorScheme.onSurface,
         ),
       ),
       cardTheme: CardThemeData(
-        color: Colors.white,
-        elevation: 2,
-        shadowColor: Colors.black12,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        color: colorScheme.surface,
+        elevation: 0,
+        shadowColor: Colors.black26,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -43,10 +68,10 @@ class AppTheme {
           backgroundColor: colorScheme.primary,
           foregroundColor: colorScheme.onPrimary,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          textStyle: GoogleFonts.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
+          minimumSize: const Size(64, 48),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          textStyle: textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.w700,
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -56,11 +81,10 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: colorScheme.primary,
-          side: BorderSide(color: colorScheme.primary, width: 1.5),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          textStyle: GoogleFonts.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
+          side: BorderSide(color: colorScheme.outline),
+          minimumSize: const Size(64, 48),
+          textStyle: textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.w700,
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -70,30 +94,36 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: colorScheme.primary,
-          textStyle: GoogleFonts.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
+          textStyle: textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),
+      chipTheme: ChipThemeData(
+        side: BorderSide(color: colorScheme.outlineVariant),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        selectedColor: colorScheme.primary.withAlpha(30),
+        checkmarkColor: colorScheme.primary,
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.grey.shade50,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        fillColor: colorScheme.surfaceContainerHighest.withAlpha(100),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: colorScheme.outlineVariant),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: colorScheme.outlineVariant),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.primary, width: 2),
+          borderSide: BorderSide(color: colorScheme.primary, width: 1.8),
         ),
-        labelStyle: TextStyle(color: Colors.grey.shade700),
-        hintStyle: TextStyle(color: Colors.grey.shade500),
       ),
     );
   }

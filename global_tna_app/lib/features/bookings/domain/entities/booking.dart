@@ -4,7 +4,7 @@ import 'payment_session.dart';
 
 class BookingEntity extends Equatable {
   final String id;
-  final String status; // pending, confirmed, completed, cancelled, failed
+  final String status;
   final double totalAmount;
   final String paymentStatus;
   final String createdAt;
@@ -22,6 +22,13 @@ class BookingEntity extends Equatable {
   });
 
   @override
-  List<Object?> get props =>
-      [id, status, totalAmount, paymentStatus, createdAt, items, paymentSession];
+  List<Object?> get props => [
+    id,
+    status,
+    totalAmount,
+    paymentStatus,
+    createdAt,
+    items,
+    paymentSession,
+  ];
 }

@@ -26,7 +26,7 @@ class ServiceRepositoryImpl implements ServiceRepository {
       );
       return Right(services);
     } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
+      return Left(ServerFailure(e.message, e.errorCode));
     } on TypeError {
       return const Left(ServerFailure('Invalid services data format from API'));
     } catch (e) {
@@ -35,12 +35,18 @@ class ServiceRepositoryImpl implements ServiceRepository {
   }
 
   @override
-  Future<Either<Failure, ServiceEntity>> getServiceById(String id, {String? bookingDate}) async {
+  Future<Either<Failure, ServiceEntity>> getServiceById(
+    String id, {
+    String? bookingDate,
+  }) async {
     try {
-      final service = await remoteDataSource.getServiceById(id, bookingDate: bookingDate);
+      final service = await remoteDataSource.getServiceById(
+        id,
+        bookingDate: bookingDate,
+      );
       return Right(service);
     } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
+      return Left(ServerFailure(e.message, e.errorCode));
     } on TypeError {
       return const Left(ServerFailure('Invalid service data format from API'));
     } catch (e) {

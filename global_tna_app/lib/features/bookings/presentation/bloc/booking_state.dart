@@ -3,7 +3,7 @@ import '../../domain/entities/booking.dart';
 
 abstract class BookingState extends Equatable {
   const BookingState();
-  
+
   @override
   List<Object> get props => [];
 }
@@ -25,6 +25,15 @@ class BookingCheckoutSuccess extends BookingState {
   final BookingEntity booking;
 
   const BookingCheckoutSuccess(this.booking);
+
+  @override
+  List<Object> get props => [booking];
+}
+
+class BookingDetailLoaded extends BookingState {
+  final BookingEntity booking;
+
+  const BookingDetailLoaded(this.booking);
 
   @override
   List<Object> get props => [booking];

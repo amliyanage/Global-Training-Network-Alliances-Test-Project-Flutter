@@ -3,12 +3,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthInterceptor extends Interceptor {
   final SharedPreferences sharedPreferences;
+  static const _tokenKey = 'jwt_token';
+  static const _cartCacheKey = 'cached_cart_v1';
 
   AuthInterceptor(this.sharedPreferences);
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    final token = sharedPreferences.getString('jwt_token');
+    final token = sharedPreferences.getString(_tokenKey);
     if (token != null) {
       options.headers['Authorization'] = 'Bearer $token';
     }
@@ -17,10 +19,11 @@ class AuthInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    // If the server returns 401 Unauthorized, we can handle it globally here
+    // Clear stale auth data globally when backend rejects the session token.
     if (err.response?.statusCode == 401) {
-      // Potentially trigger a global logout event or token refresh depending on backend support
+      sharedPreferences.remove(_tokenKey);
+      sharedPreferences.remove(_cartCacheKey);
     }
-    super.onError(err, handler);
+    handler.next(err);
   }
 }

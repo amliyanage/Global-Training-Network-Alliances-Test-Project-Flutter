@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import '../../domain/entities/booking.dart';
 import '../../domain/entities/payment_session.dart';
@@ -44,76 +46,15 @@ class BookingModel extends BookingEntity {
     );
   }
 
-  /// Parses a full checkout API response body that may contain a nested
-  /// `paymentSession.payload` object alongside the booking data.
-  ///
-  /// Supports multiple response shapes:
-  ///   Shape A: { booking: {...}, paymentSession: { payload: {...} } }
-  ///   Shape B: { data: { booking: {...} }, paymentSession: { payload: {...} } }
-  ///   Shape C: { _id: ..., paymentSession: { payload: {...} } }   (flat)
   factory BookingModel.fromCheckoutJson(Map<String, dynamic> json) {
     final map = Map<String, dynamic>.from(json);
-
-    // ── 1. Locate booking data ──────────────────────────────────────────
-    Map<String, dynamic> bookingMap;
-    final rawBookingOrData = map['booking'] ?? map['data'];
-    if (rawBookingOrData is Map) {
-      // Could be { booking: { ... } } OR { data: { booking: { ... } } }
-      final inner = rawBookingOrData;
-      final nested = inner['booking'];
-      if (nested is Map) {
-        bookingMap = Map<String, dynamic>.from(nested);
-      } else {
-        bookingMap = Map<String, dynamic>.from(inner);
-      }
-    } else {
-      // Flat response — the root IS the booking
-      bookingMap = map;
-    }
-
-    // ── 2. Locate paymentSession ────────────────────────────────────────
-    // Try root level first, then inside booking wrapper
-    dynamic rawSession = map['paymentSession'];
-    if (rawSession == null) {
-      final wrapper = map['booking'] ?? map['data'];
-      if (wrapper is Map) rawSession = wrapper['paymentSession'];
-    }
-
-    PaymentSession? session;
-    if (rawSession is Map) {
-      final sessionMap = Map<String, dynamic>.from(rawSession);
-      // Payload may be directly in paymentSession or nested under 'payload'
-      final rawPayload = sessionMap['payload'] ?? sessionMap;
-      if (rawPayload is Map) {
-        final payload = Map<String, dynamic>.from(rawPayload);
-
-        // Log in debug mode to help diagnose issues
-        if (kDebugMode) {
-          debugPrint('[BookingModel] paymentSession payload: $payload');
-        }
-
-        final merchantId = (payload['merchant_id'] ?? '').toString();
-        final orderId = (payload['order_id'] ?? '').toString();
-        final amount = _asDouble(payload['amount']) ?? 0.0;
-
-        // Only build a valid session if the mandatory fields are present
-        if (merchantId.isNotEmpty && orderId.isNotEmpty && amount > 0) {
-          session = PaymentSession(
-            merchantId: merchantId,
-            orderId: orderId,
-            amount: amount,
-            currency: (payload['currency'] ?? 'LKR').toString(),
-            notifyUrl: (payload['notify_url'] ?? '').toString(),
-            returnUrl: (payload['return_url'] ?? '').toString(),
-            cancelUrl: (payload['cancel_url'] ?? '').toString(),
-            custom1: (payload['custom_1'] ?? '').toString(),
-            custom2: (payload['custom_2'] ?? '').toString(),
-            // Default to SANDBOX mode — backend should explicitly set false for live
-            sandbox: payload['sandbox'] != false,
-          );
-        }
-      }
-    }
+    final dataMap = _asMap(map['data']);
+    final bookingMap = _resolveBookingMap(map, dataMap);
+    final session = _extractPaymentSession(
+      root: map,
+      dataMap: dataMap,
+      bookingMap: bookingMap,
+    );
 
     if (kDebugMode) {
       debugPrint(
@@ -125,17 +66,285 @@ class BookingModel extends BookingEntity {
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'status': status,
-        'totalAmount': totalAmount,
-        'paymentStatus': paymentStatus,
-        'createdAt': createdAt,
-        'items': itemsModel.map((e) => e.toJson()).toList(),
-      };
+    'id': id,
+    'status': status,
+    'totalAmount': totalAmount,
+    'paymentStatus': paymentStatus,
+    'createdAt': createdAt,
+    'items': itemsModel.map((e) => e.toJson()).toList(),
+  };
 
   static double? _asDouble(dynamic value) {
     if (value is num) return value.toDouble();
-    if (value is String) return double.tryParse(value);
+    if (value is String) {
+      final normalized = value.replaceAll(',', '').trim();
+      if (normalized.isEmpty) return null;
+      return double.tryParse(normalized);
+    }
     return null;
+  }
+
+  static Map<String, dynamic>? _asMap(dynamic value) {
+    if (value is Map) {
+      return Map<String, dynamic>.from(value);
+    }
+    if (value is String) {
+      final raw = value.trim();
+      if (raw.startsWith('{') && raw.endsWith('}')) {
+        try {
+          final decoded = jsonDecode(raw);
+          if (decoded is Map) {
+            return Map<String, dynamic>.from(decoded);
+          }
+        } catch (_) {
+          return null;
+        }
+      }
+    }
+    return null;
+  }
+
+  static Map<String, dynamic> _resolveBookingMap(
+    Map<String, dynamic> root,
+    Map<String, dynamic>? dataMap,
+  ) {
+    final candidates = <Map<String, dynamic>?>[
+      _asMap(root['booking']),
+      _asMap(dataMap?['booking']),
+      _asMap(dataMap?['data']),
+      _asMap(root['data']),
+      root,
+    ];
+
+    for (final candidate in candidates) {
+      if (candidate == null || candidate.isEmpty) continue;
+      if (_looksLikeBooking(candidate)) {
+        return candidate;
+      }
+    }
+
+    return root;
+  }
+
+  static bool _looksLikeBooking(Map<String, dynamic> map) {
+    const bookingKeys = <String>{
+      '_id',
+      'id',
+      'status',
+      'totalAmount',
+      'paymentStatus',
+      'paymentMethod',
+      'items',
+      'paymentOrderId',
+    };
+
+    return map.keys.any(bookingKeys.contains);
+  }
+
+  static PaymentSession? _extractPaymentSession({
+    required Map<String, dynamic> root,
+    required Map<String, dynamic>? dataMap,
+    required Map<String, dynamic> bookingMap,
+  }) {
+    final candidates = <dynamic>[
+      root['paymentSession'],
+      root['payment_session'],
+      root['payhereSession'],
+      root['payhere_session'],
+      dataMap?['paymentSession'],
+      dataMap?['payment_session'],
+      dataMap?['payhereSession'],
+      dataMap?['payhere_session'],
+      bookingMap['paymentSession'],
+      bookingMap['payment_session'],
+      root['payload'],
+      dataMap?['payload'],
+    ];
+
+    for (final candidate in candidates) {
+      final session = _parsePaymentSession(
+        rawSession: candidate,
+        bookingMap: bookingMap,
+      );
+      if (session != null) return session;
+    }
+
+    return _buildFallbackSessionFromBooking(bookingMap);
+  }
+
+  static PaymentSession? _parsePaymentSession({
+    required dynamic rawSession,
+    required Map<String, dynamic> bookingMap,
+  }) {
+    final sessionMap = _asMap(rawSession);
+    if (sessionMap == null) return null;
+
+    final payloadCandidates = <Map<String, dynamic>>[
+      if (_asMap(sessionMap['payload']) != null) _asMap(sessionMap['payload'])!,
+      if (_asMap(sessionMap['data']) != null) _asMap(sessionMap['data'])!,
+      if (_asMap(sessionMap['paymentPayload']) != null)
+        _asMap(sessionMap['paymentPayload'])!,
+      sessionMap,
+    ];
+
+    for (final payload in payloadCandidates) {
+      final merchantId = _pickString(payload, const [
+        'merchant_id',
+        'merchantId',
+      ]);
+      final orderId =
+          _pickString(payload, const [
+            'order_id',
+            'orderId',
+            'payment_order_id',
+            'paymentOrderId',
+          ]) ??
+          _pickString(bookingMap, const ['paymentOrderId', 'payment_order_id']);
+
+      final amount =
+          _pickDouble(payload, const [
+            'amount',
+            'payhere_amount',
+            'payhereAmount',
+            'totalAmount',
+          ]) ??
+          _pickDouble(bookingMap, const ['totalAmount', 'amount']);
+
+      // If there are no payment session signals in this payload candidate,
+      // skip quietly and keep trying the next candidate.
+      final hasAnySignal =
+          merchantId != null || orderId != null || amount != null;
+      if (!hasAnySignal) {
+        continue;
+      }
+
+      if (kDebugMode) {
+        debugPrint(
+          '[BookingModel] paymentSession payload keys: ${payload.keys.toList()}',
+        );
+      }
+
+      // merchant_id can be omitted by backend; app can fill it from EnvConfig.
+      if (orderId == null || amount == null || amount <= 0) {
+        if (kDebugMode) {
+          debugPrint(
+            '[BookingModel] paymentSession candidate invalid: '
+            'merchantId=$merchantId, orderId=$orderId, amount=$amount',
+          );
+        }
+        continue;
+      }
+
+      return PaymentSession(
+        merchantId: merchantId ?? '',
+        orderId: orderId,
+        amount: amount,
+        currency:
+            _pickString(payload, const ['currency', 'payhere_currency']) ??
+            'LKR',
+        notifyUrl:
+            _pickString(payload, const ['notify_url', 'notifyUrl']) ?? '',
+        returnUrl:
+            _pickString(payload, const ['return_url', 'returnUrl']) ?? '',
+        cancelUrl:
+            _pickString(payload, const ['cancel_url', 'cancelUrl']) ?? '',
+        custom1: _pickString(payload, const ['custom_1', 'custom1']) ?? '',
+        custom2: _pickString(payload, const ['custom_2', 'custom2']) ?? '',
+        sandbox: _pickBool(payload, const [
+          'sandbox',
+          'isSandbox',
+        ], fallback: true),
+      );
+    }
+
+    return null;
+  }
+
+  static PaymentSession? _buildFallbackSessionFromBooking(
+    Map<String, dynamic> bookingMap,
+  ) {
+    final orderId = _pickString(bookingMap, const [
+      'paymentOrderId',
+      'payment_order_id',
+      'orderId',
+      'order_id',
+      '_id',
+      'id',
+    ]);
+    final amount = _pickDouble(bookingMap, const ['totalAmount', 'amount']);
+
+    if (orderId == null || amount == null || amount <= 0) {
+      return null;
+    }
+
+    if (kDebugMode) {
+      debugPrint(
+        '[BookingModel] building fallback paymentSession from booking fields '
+        '(orderId=$orderId, amount=$amount)',
+      );
+    }
+
+    return PaymentSession(
+      // Kept empty on purpose; checkout page fills from EnvConfig when empty.
+      merchantId:
+          _pickString(bookingMap, const ['merchant_id', 'merchantId']) ?? '',
+      orderId: orderId,
+      amount: amount,
+      currency:
+          _pickString(bookingMap, const ['currency', 'payhere_currency']) ??
+          'LKR',
+      notifyUrl:
+          _pickString(bookingMap, const ['notify_url', 'notifyUrl']) ?? '',
+      returnUrl:
+          _pickString(bookingMap, const ['return_url', 'returnUrl']) ?? '',
+      cancelUrl:
+          _pickString(bookingMap, const ['cancel_url', 'cancelUrl']) ?? '',
+      custom1: _pickString(bookingMap, const ['_id', 'id', 'custom_1']) ?? '',
+      custom2:
+          _pickString(bookingMap, const ['userId', 'user_id', 'custom_2']) ??
+          '',
+      sandbox: _pickBool(bookingMap, const [
+        'sandbox',
+        'isSandbox',
+      ], fallback: true),
+    );
+  }
+
+  static String? _pickString(Map<String, dynamic> map, List<String> keys) {
+    for (final key in keys) {
+      final value = map[key];
+      if (value == null) continue;
+      final text = value.toString().trim();
+      if (text.isNotEmpty) return text;
+    }
+    return null;
+  }
+
+  static double? _pickDouble(Map<String, dynamic> map, List<String> keys) {
+    for (final key in keys) {
+      final value = map[key];
+      final parsed = _asDouble(value);
+      if (parsed != null) return parsed;
+    }
+    return null;
+  }
+
+  static bool _pickBool(
+    Map<String, dynamic> map,
+    List<String> keys, {
+    required bool fallback,
+  }) {
+    for (final key in keys) {
+      final value = map[key];
+      if (value == null) continue;
+      if (value is bool) return value;
+      if (value is num) return value != 0;
+      if (value is String) {
+        final normalized = value.trim().toLowerCase();
+        if (normalized == 'true' || normalized == '1') return true;
+        if (normalized == 'false' || normalized == '0') return false;
+      }
+    }
+    return fallback;
   }
 }
